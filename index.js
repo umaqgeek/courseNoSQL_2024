@@ -20,27 +20,43 @@ app.get('/load-photos', async (_, res) => {
     await Mongo.PhotoModel.insertMany(data);
 
     // store in Redis
-    await Redis.redisClient.set('photos', '');
-    await Redis.redisClient.set('photos', JSON.stringify(data));
+    await Redis.redisClient.flushAll();
+    await Redis.redisClient.set(Redis.KEY.PHOTOS, '');
+    await Redis.redisClient.set(Redis.KEY.PHOTOS, JSON.stringify(data));
 
     res.send("The photos were successfully loaded. <a href='/'>&lt; Back</a>");
 });
 
 app.get('/', async (req, res) => {
-    const limit = req.query.limit || 10;
-    const offset = req.query.offset || 0;
-    const search = req.query.search || '';
+    const startTime = (Date.now());
+
+    var limit = req.query.limit || 10;
+    var offset = req.query.offset || 0;
+    var search = req.query.search || '';
+    const pattern = Redis.KEY.PHOTOS + ':' + limit + ':' + offset + ':' + search.replace(/\s/g, '_');
 
     const find = search ? {
         title: new RegExp(search, 'ig')
     } : {};
 
-    const photos = await Mongo.PhotoModel
-        .find(find)
-        .limit(limit)
-        .skip(offset);
-    const photosAllCount = await Mongo.PhotoModel
-        .countDocuments(find);
+    const photoPattern = await Redis.redisClient.get(pattern);
+    var photos = [];
+
+    if (photoPattern) {
+        photos = JSON.parse(photoPattern);
+    } else {
+        photos = await Mongo.PhotoModel
+            .find(find)
+            .limit(limit)
+            .skip(offset);
+
+        await Redis.redisClient.set(pattern, JSON.stringify(photos));
+    }
+
+    const photosAllCount = await Mongo.PhotoModel.countDocuments(find);
+
+    const endTime = (Date.now());
+    const diffTime = endTime - startTime;
 
     res.render('index', {
         photos,
@@ -48,6 +64,7 @@ app.get('/', async (req, res) => {
         limit: photos.length,
         offset,
         search,
+        diffTime,
     });
 });
 

@@ -8,6 +8,9 @@ const redisClient = Redis.createClient({
 });
 
 const DEFAULT_EXPIRATION = 300; // 5 minutes
+const KEY = {
+    PHOTOS: 'photos',
+};
 
 const startRedis = async () => {
     if (!await redisClient.isOpen) {
@@ -23,4 +26,5 @@ module.exports = {
     startRedis,
     redisClient,
     DEFAULT_EXPIRATION,
+    KEY,
 };

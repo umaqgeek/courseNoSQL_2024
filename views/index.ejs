@@ -11,14 +11,29 @@
 </head>
 <body>
     <div class="container">
-        <form action="/">
+        <form action="/" method="get">
             <div class="row mt-3">
                 <div class="col-12" style="display: flex; flex-direction: row; padding: 0px;">
                     <input name="search" type="text" class="form-control" placeholder="Search here ..." value="<%=search %>" />
                     <button class="btn btn-primary" type="submit">Search</button>
                 </div>
+                <div class="col-12 mt-1" style="display: flex; flex-direction: row; padding: 0px; align-items: center;">
+                    <div style="margin-right: 2%;">Limit: </div>
+                    <input name="limit" type="number" class="form-control" placeholder="limit" value="<%=limit %>" />
+                    <div style="width: 10%;"></div>
+                    <div style="margin-right: 2%;">Offset: </div>
+                    <input name="offset" type="number" class="form-control" placeholder="offset" value="<%=offset %>" />
+                </div>
             </div>
         </form>
+        <div class="row card mt-3">
+            <div class="col-12" style="text-align: center;">
+                &nbsp;
+                <p><%=limit %> data from <%=photosAllCount %> data.</p>
+                <p>Response time fetching data: <%=diffTime %>ms</p>
+                <p><a href='/load-photos'>Fetch Data &gt;</a></p>
+            </div>
+        </div>
         <div class="row card mt-3">
             <div class="col-12">
                 <table class="table">
@@ -43,13 +58,6 @@
                         <% }) %>
                     </tbody>
                 </table>
-            </div>
-        </div>
-        <div class="row card mt-3">
-            <div class="col-12" style="text-align: center;">
-                <br />
-                <%=limit %> data from <%=photosAllCount %> data.
-                <br />&nbsp;
             </div>
         </div>
     </div>
