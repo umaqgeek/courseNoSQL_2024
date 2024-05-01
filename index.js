@@ -1,42 +1,56 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const Redis = require('redis');
+const Redis = require('./modules/redis');
+const Mongo = require('./modules/mongo');
 
-const redisClient = Redis.createClient({
-    host: 'localhost',
-    port: 6379,
-});
-const DEFAULT_EXPIRATION = 10; // 10 seconds
+Mongo.startMongo(); // start mongodb connection
+Redis.startRedis(); // start redis connection
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+app.set('view engine', 'ejs');
 
-app.get('/photos', async (req, res) => {
-    const albumId = req.query.albumId;
+app.get('/load-photos', async (_, res) => {
+    const { data } = await axios.get('https://jsonplaceholder.typicode.com/photos');
+    
+    // store in MongoDB
+    await Mongo.PhotoModel.deleteMany({});
+    await Mongo.PhotoModel.insertMany(data);
 
-    if (!await redisClient.isOpen) {
-        await redisClient.connect();
-    }
+    // store in Redis
+    await Redis.redisClient.set('photos', '');
+    await Redis.redisClient.set('photos', JSON.stringify(data));
 
-    const photosStr = await redisClient.get('photos');
-    const photos = JSON.parse(photosStr);
-
-    if (photos) {
-        res.json(photos);
-    } else {
-        const { data } = await axios.get(
-            'https://jsonplaceholder.typicode.com/photos',
-            {
-                params: {
-                    albumId: albumId
-                }
-            }
-        );
-        await redisClient.setEx('photos', DEFAULT_EXPIRATION, JSON.stringify(data));
-        res.json(data);
-    }
+    res.send("The photos were successfully loaded. <a href='/'>&lt; Back</a>");
 });
 
-app.listen(3000);
+app.get('/', async (req, res) => {
+    const limit = req.query.limit || 10;
+    const offset = req.query.offset || 0;
+    const search = req.query.search || '';
+
+    const find = search ? {
+        title: new RegExp(search, 'ig')
+    } : {};
+
+    const photos = await Mongo.PhotoModel
+        .find(find)
+        .limit(limit)
+        .skip(offset);
+    const photosAllCount = await Mongo.PhotoModel
+        .countDocuments(find);
+
+    res.render('index', {
+        photos,
+        photosAllCount,
+        limit: photos.length,
+        offset,
+        search,
+    });
+});
+
+app.listen(3000, function () {
+    console.log("Server listening on port 3000\nThe app running on this URL http://localhost:3000");
+});
