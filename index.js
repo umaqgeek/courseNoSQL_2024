@@ -12,6 +12,46 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.set('view engine', 'ejs');
 
+app.get('/tambah-data', async (req, res) => {
+    const title = req.query.title || '';
+    if (title) {
+        await Mongo.PhotoModel.insertMany([{
+            title,
+        }]);
+        res.send(title + ' created successfully.');
+    } else {
+        res.send('Please do not leave title blank!');
+    }
+});
+
+app.get('/buang-data', async (req, res) => {
+    const title = req.query.title || '';
+    const price = req.query.price || 0;
+    const id = req.query.id || 0;
+    if (title || price || id) {
+        const status = await Mongo.PhotoModel.deleteMany({
+            '$or': [
+                {
+                    title: new RegExp(title, 'i'),
+                },
+                {
+                    price: { '$eq': price },
+                },
+                {
+                    id: { '$eq': id },
+                },
+            ]
+        });
+        if (status.deletedCount != 0) {
+            res.send('Data is deleted successfully.');
+        } else {
+            res.send('Nothing been deleted.');
+        }
+    } else {
+        res.send('Title or price or ID is required!');
+    }
+});
+
 app.get('/load-photos', async (_, res) => {
     const { data } = await axios.get('https://jsonplaceholder.typicode.com/photos');
     
